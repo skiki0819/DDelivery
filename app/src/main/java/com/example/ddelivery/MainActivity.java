@@ -3,6 +3,10 @@ package com.example.ddelivery;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.View;
 import android.location.Location;
@@ -11,6 +15,7 @@ import android.location.LocationManager;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -26,7 +31,7 @@ import org.osmdroid.views.overlay.compass.CompassOverlay;
 import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener{
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     //Map & lokáció
     private static final int REQUEST_LOCATION_PERMISSION = 1;
     private MapView mapView = null;
@@ -40,9 +45,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
     private final float[] orientationAngles = new float[3];
-    TextView mangetometerText;
     TextView accelemeterText;
-    
+    TextView mangetometerText;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +55,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         //OSMDroid alapértelmezett beállítások, cache konfiguráció
         Configuration.getInstance().setUserAgentValue("com.example.ddelivery");
-
 
 
         //Szenzor
@@ -95,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View v) {
                 if (myLocationOverlay.getMyLocation() != null) {
                     mapView.getController().setZoom(18.0);
-                    mapView.getController().setCenter(new GeoPoint(myLocationOverlay.getMyLocation().getLatitude(),myLocationOverlay.getMyLocation().getLongitude()));
+                    mapView.getController().setCenter(new GeoPoint(myLocationOverlay.getMyLocation().getLatitude(), myLocationOverlay.getMyLocation().getLongitude()));
                 } else {
                     Toast.makeText(MainActivity.this, "Current location not available", Toast.LENGTH_SHORT).show();
                 }
@@ -125,13 +129,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {}
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+        }
 
         @Override
-        public void onProviderEnabled(@NonNull String provider) {}
+        public void onProviderEnabled(@NonNull String provider) {
+        }
 
         @Override
-        public void onProviderDisabled(@NonNull String provider) {}
+        public void onProviderDisabled(@NonNull String provider) {
+        }
     };
 
     //Engedélykérés eredményszámítás
@@ -232,3 +239,5 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onDestroy();
         mapView.setDestroyMode(true);
     }
+
+}
