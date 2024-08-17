@@ -16,12 +16,6 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-//Szenzor
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
-import android.widget.TextView;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.views.MapView;
@@ -39,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MyLocationNewOverlay myLocationOverlay;
     private CompassOverlay compassOverlay;
     private LocationManager locationManager;
+
     //Szenzor
     private SensorManager sensorManager;
     private final float[] accelerometerReading = new float[3];
@@ -48,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TextView mangetometerText;
     TextView accelemeterText;
     
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,7 +59,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         //MapView inicializálása
-        //mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView = findViewById(R.id.map);
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
@@ -237,5 +232,3 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onDestroy();
         mapView.setDestroyMode(true);
     }
-
-}
