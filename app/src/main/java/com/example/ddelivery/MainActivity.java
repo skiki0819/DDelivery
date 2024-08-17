@@ -47,8 +47,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] orientationAngles = new float[3];
     TextView mangetometerText;
     TextView accelemeterText;
-
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
