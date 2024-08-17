@@ -34,6 +34,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private CompassOverlay compassOverlay;
     private LocationManager locationManager;
 
+    //Szenzor
+    private SensorManager sensorManager;
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+    TextView mangetometerText;
+    TextView accelemeterText;
+    
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
