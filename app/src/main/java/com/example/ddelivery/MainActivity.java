@@ -2,15 +2,9 @@ package com.example.ddelivery;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -21,17 +15,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.res.ResourcesCompat;
 
 //Szenzor
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import org.osmdroid.config.Configuration;
@@ -44,25 +33,35 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener{
+    //Map & lokáció
     private static final int REQUEST_LOCATION_PERMISSION = 1;
     private MapView mapView = null;
     private MyLocationNewOverlay myLocationOverlay;
     private CompassOverlay compassOverlay;
     private LocationManager locationManager;
-
-
-    SensorManager sm;
-    List<Sensor> sensorList;
+    //Szenzor
+    private SensorManager sensorManager;
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+    TextView mangetometerText;
+    TextView accelemeterText;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        setContentView(R.layout.activity_main);
         //OSMDroid alapértelmezett beállítások, cache konfiguráció
         Configuration.getInstance().setUserAgentValue("com.example.ddelivery");
 
-        setContentView(R.layout.activity_main);
+
+
+        //Szenzor
+        mangetometerText = findViewById(R.id.mangetometerText);
+        accelemeterText = findViewById(R.id.accelemeterText);
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         //MapView inicializálása
         //mapView.setTileSource(TileSourceFactory.MAPNIK);
@@ -116,36 +115,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mapView.onResume();
-        myLocationOverlay.enableMyLocation();
-        compassOverlay.enableCompass();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mapView.onPause();
-        myLocationOverlay.disableMyLocation();
-        compassOverlay.disableCompass();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mapView.setDestroyMode(true);
-    }
-
     //Helyadatok frissítésevel kapcsolatos beállítások
     private void startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, locationListener);
         }
     }
-
-
 
     //Helyadatok lekérdezése
     private final LocationListener locationListener = new LocationListener() {
@@ -194,18 +169,74 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    @SuppressLint("DefaultLocale")
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(sensorEvent.values, 0, accelerometerReading,
+                    0, accelerometerReading.length);
+            float acceleField = accelerometerReading[0];
+            accelemeterText.setText(String.format("%d kph", (int) acceleField));
+        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(sensorEvent.values, 0, magnetometerReading,
+                    0, magnetometerReading.length);
+            float xMagneticField = magnetometerReading[0];
+            mangetometerText.setText(String.format("%d µT", (int) xMagneticField));
+        }
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
 
+    //android doksiba volt, nemtom jólesz e valamire függvény..
+    /*
+    public void updateOrientationAngles() {
+        // Update rotation matrix, which is needed to update orientation angles.
+        SensorManager.getRotationMatrix(rotationMatrix, null,
+                accelerometerReading, magnetometerReading);
+        // "rotationMatrix" now has up-to-date information.
+
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+        // "orientationAngles" now has up-to-date information.
+    }
+     */
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
+        myLocationOverlay.enableMyLocation();
+        compassOverlay.enableCompass();
+
+        //Szenzor listennerek
+        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+        Sensor magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if (magneticField != null) {
+            sensorManager.registerListener(this, magneticField,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
     }
 
     @Override
-    public void onPointerCaptureChanged(boolean hasCapture) {
-        super.onPointerCaptureChanged(hasCapture);
+    protected void onPause() {
+        super.onPause();
+        mapView.onPause();
+        myLocationOverlay.disableMyLocation();
+        compassOverlay.disableCompass();
+
+        //Szenzor listenner leállítása
+        sensorManager.unregisterListener(this);
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mapView.setDestroyMode(true);
+    }
+
 }
