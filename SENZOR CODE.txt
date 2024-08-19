@@ -1,0 +1,217 @@
+//Unused szarok
+/*
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.annotation.SuppressLint;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+
+import android.view.View;
+import android.location.Location;
+import android.location.LocationListener;
+
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
+
+implements SensorEventListener ////
+
+VARIABLES
+    //Szenzor
+    private SensorManager sensorManager;
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+    TextView accelemeterText;
+    TextView mangetometerText;
+
+    private MyLocationNewOverlay myLocationOverlay;
+
+
+
+ //Helymeghatározás
+        myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), mapView);
+        myLocationOverlay.enableMyLocation();
+
+        mapView.getOverlays().add(myLocationOverlay);
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        checkLocationPermission();
+        //Saját icon helyzethez (Nem működik rendesen de legalább szar)
+
+        Drawable currentDraw = ResourcesCompat.getDrawable(getResources(), R.drawable.navarrow, null);
+        Bitmap currentIcon;
+        currentIcon = null;
+        if (currentDraw != null) {
+            currentIcon = ((BitmapDrawable) currentDraw).getBitmap();
+            currentIcon = Bitmap.createScaledBitmap(currentIcon,50,50,true);
+        }
+
+        myLocationOverlay.setPersonIcon(currentIcon);
+        myLocationOverlay.enableFollowLocation();
+
+        myLocationOverlay.setPersonIcon( currentIcon );
+
+
+//Gomb, ugrás a saját lokációra
+Button btnCenterMap = findViewById(R.id.btn_center_map);
+        btnCenterMap.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        if (myLocationOverlay.getMyLocation() != null) {
+            mapView.getController().setZoom(18.0);
+            mapView.getController().setCenter(new GeoPoint(myLocationOverlay.getMyLocation().getLatitude(), myLocationOverlay.getMyLocation().getLongitude()));
+        } else {
+            Toast.makeText(MainActivity.this, "Current location not available", Toast.LENGTH_SHORT).show();
+        }
+    }
+});
+
+
+
+
+//Szenzor
+mangetometerText = findViewById(R.id.mangetometerText);
+accelemeterText = findViewById(R.id.accelemeterText);
+sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+
+
+   //Helyadatok frissítésevel kapcsolatos beállítások
+    private void startLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, locationListener);
+        }
+    }
+
+    //Helyadatok lekérdezése
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            GeoPoint newLocation = new GeoPoint(location.getLatitude(), location.getLongitude());
+            mapView.getController().setCenter(newLocation);
+        }
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+        }
+
+        @Override
+        public void onProviderEnabled(@NonNull String provider) {
+        }
+
+        @Override
+        public void onProviderDisabled(@NonNull String provider) {
+        }
+    };
+
+    //Engedélykérés eredményszámítás
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates();
+            } else {
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    //Helyadathozzáférés függvényében indítja az updatet
+    private void checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_PERMISSION);
+        } else {
+            startLocationUpdates();
+        }
+    }
+
+    //Helyadatok frissítésének leállítása, ha az engedély megtagadva
+    private void stopLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.removeUpdates(locationListener);
+        }
+    }
+
+    @SuppressLint("DefaultLocale")
+    @Override
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(sensorEvent.values, 0, accelerometerReading,
+                    0, accelerometerReading.length);
+            float acceleField = accelerometerReading[0];
+            accelemeterText.setText(String.format("%d kph", (int) acceleField));
+        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(sensorEvent.values, 0, magnetometerReading,
+                    0, magnetometerReading.length);
+            float xMagneticField = magnetometerReading[0];
+            mangetometerText.setText(String.format("%d µT", (int) xMagneticField));
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
+        myLocationOverlay.enableMyLocation();
+        compassOverlay.enableCompass();
+
+        //Szenzor listennerek
+        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+        Sensor magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if (magneticField != null) {
+            sensorManager.registerListener(this, magneticField,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mapView.onPause();
+        myLocationOverlay.disableMyLocation();
+        compassOverlay.disableCompass();
+
+        //Szenzor listenner leállítása
+        sensorManager.unregisterListener(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mapView.setDestroyMode(true);
+    }
+
+
+
+    //android doksiba volt, nemtom jólesz e valamire függvény..
+    public void updateOrientationAngles() {
+        // Update rotation matrix, which is needed to update orientation angles.
+        SensorManager.getRotationMatrix(rotationMatrix, null,
+                accelerometerReading, magnetometerReading);
+        // "rotationMatrix" now has up-to-date information.
+
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+        // "orientationAngles" now has up-to-date information.
+    }
+
+
+
+ */

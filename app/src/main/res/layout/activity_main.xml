@@ -1,56 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+    android:orientation="vertical">
 
+    <!-- SearchView a képernyő tetején, teljes szélességben -->
+    <androidx.appcompat.widget.SearchView
+        android:id="@+id/addPostCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:queryHint="Enter postcode" >
+
+    </androidx.appcompat.widget.SearchView>
+
+    <!-- Resizable LinearLayout a képernyő alján -->
     <org.osmdroid.views.MapView
         android:id="@+id/map"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1" />
 
-    <TextView
-        android:id="@+id/mangetometerText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="70dp"
-        android:text="xx"
-        android:textColor="#000000"
-        android:textSize="40sp"
-        android:visibility="visible"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <!-- Resizable LinearLayout a képernyő alján -->
+    <LinearLayout
+        android:id="@+id/resizableView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:orientation="vertical"
+        android:background="@android:color/white">
 
-    <TextView
-        android:id="@+id/accelemeterText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="220dp"
-        android:text="xx"
-        android:textColor="#000000"
-        android:textSize="40sp"
-        android:visibility="visible"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <!-- Resize handle a View felső részén -->
+        <View
+            android:id="@+id/resizeHandle"
+            android:layout_width="match_parent"
+            android:layout_height="21dp"
+            android:background="@android:color/darker_gray" />
 
-    <Button
-        android:id="@+id/btn_center_map"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        android:backgroundTint="#6750A3"
-        android:insetTop="4dp"
-        android:text="Pos"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        <!-- ListView -->
+        <ListView
+            android:id="@+id/postcodeListView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- MapView teljes képernyőn, alatta a resizable view -->
+</LinearLayout>
