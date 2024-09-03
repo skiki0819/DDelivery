@@ -67,6 +67,16 @@ public class MainActivity extends AppCompatActivity {
     private static final int EXPANDED_HEIGHT = 800; // dp
     private static final int COLLAPSED_HEIGHT = 60; // dp
     private Map<String, List<Marker>> markerMap;
+    private Map<String, Polyline> routeMap = new HashMap<>(); // Útvonalak tárolásához szükséges térkép az irányítószámokhoz társítva
+    private List<GeoPoint> allGeoPoints = new ArrayList<>();
+    GeoPoint fixedStartPoint = new GeoPoint(53.401945, -2.175752);
+
+    private void updateAllGeoPoints(List<GeoPoint> newPoints) {
+        // Clear the list before adding new points
+        allGeoPoints.clear();
+        allGeoPoints.addAll(newPoints);
+    }
+
 
     double minLat = Double.MAX_VALUE;
     double maxLat = -Double.MAX_VALUE;
@@ -92,8 +102,8 @@ public class MainActivity extends AppCompatActivity {
         //MapView inicializálása
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
-        mapView.getController().setZoom(15.0);
-        mapView.getController().setCenter(new GeoPoint(53.40979, -2.15761));
+        mapView.getController().setZoom(16.0);
+        mapView.getController().setCenter(new GeoPoint(53.401945, -2.175752));
         mapView.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.NEVER);
 
         //Iránytű
@@ -101,8 +111,9 @@ public class MainActivity extends AppCompatActivity {
         compassOverlay.enableCompass();
         mapView.getOverlays().add(compassOverlay);
 
+        addFixedStartPointMarker(fixedStartPoint);
+
         // SearchView inicializálása
-        postcodeListView.setAdapter(adapter);
         addPostCode.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -151,8 +162,29 @@ public class MainActivity extends AppCompatActivity {
                                         mapView.getOverlays().remove(marker);
                                     }
                                     markerMap.remove(postcodeToDelete);
-                                    mapView.invalidate(); // Frissíti a térképet
                                 }
+
+                                // Útvonal (kék vonal) eltávolítása a térképről
+                                if (routeMap.containsKey(postcodeToDelete)) {
+                                    Polyline polyline = routeMap.get(postcodeToDelete);
+                                    mapView.getOverlays().remove(polyline);
+                                    routeMap.remove(postcodeToDelete); // Törlés a routeMap-ből
+                                }
+
+                                // **Új kódrész**: Pontok eltávolítása a allGeoPoints listából
+                                List<GeoPoint> pointsToRemove = new ArrayList<>();
+                                if (markerMap.containsKey(postcodeToDelete)) {
+                                    for (Marker marker : markerMap.get(postcodeToDelete)) {
+                                        pointsToRemove.add(marker.getPosition());
+                                    }
+                                }
+                                allGeoPoints.removeAll(pointsToRemove);
+                                allGeoPoints.remove(postcodeToDelete);
+
+                                Log.d("DEBUG", " allgeo: "+allGeoPoints.size());
+                                Log.d("DEBUG", " postcodes: "+postcodes.size());
+                                mapView.invalidate(); // Frissíti a térképet
+
 
                                 // Visszajelzés a felhasználónak
                                 Toast.makeText(MainActivity.this, "Postcode deleted: " + postcodeToDelete, Toast.LENGTH_SHORT).show();
@@ -191,112 +223,111 @@ public class MainActivity extends AppCompatActivity {
         animator.start();
     }
 
-    private void handlePostcodeSearch(String postcode) {
-        // Itt írd meg a logikát, hogy mit tegyél a beírt postcode-dal
-        // Például, használhatsz egy geokódolási szolgáltatást, hogy a postcode-ot GeoPoint-ra alakítsd, majd középre helyezd a térképen
-        // Például:
-        // GeoPoint point = geocodePostcode(postcode);
-        // if (point != null) {
-        //     mapView.getController().setCenter(point);
-        // }
+    private void addFixedStartPointMarker(GeoPoint fixedStartPoint) {
+        Marker startMarker = new Marker(mapView);
+        startMarker.setPosition(fixedStartPoint);
+        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        startMarker.setTitle("Fixed Start Point");
+        //startMarker.setIcon(getResources().getDrawable(R.drawable.ic_start_marker)); // Ha van egyéni marker ikonod
+
+        mapView.getOverlays().add(startMarker);
+        mapView.invalidate();
+
+        allGeoPoints.add(fixedStartPoint); // A fix kezdőpont hozzáadása az összes pontok listájához
     }
 
-    private List<GeoPoint> allGeoPoints = new ArrayList<>();
-
     private void addMarkersToMap(String postcode, List<GeoPoint> geoPoints) {
-        // Előző markerek eltávolítása
-        if (markerMap.containsKey(postcode)) {
-            for (Marker marker : markerMap.get(postcode)) {
-                mapView.getOverlays().remove(marker);
-            }
-            markerMap.remove(postcode);
-        }
+        // Update allGeoPoints with the new points
+        updateAllGeoPoints(geoPoints);
 
-        // Új markerek hozzáadása
+        // Add new markers and routes
         List<Marker> markers = new ArrayList<>();
-
         for (GeoPoint point : geoPoints) {
             Marker marker = new Marker(mapView);
             marker.setPosition(point);
             marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
             mapView.getOverlays().add(marker);
             markers.add(marker);
-            allGeoPoints.add(point); // Pont hozzáadása az összes pontok listájához
-            Log.d("DEBUG", "GeoPoint: " + point.getLatitude() + ", " + point.getLongitude()+ " allgeo: "+allGeoPoints.size());
-        }
-
-        // Ha több mint egy pont van, útvonal kérése az OSRM-től
-        if (allGeoPoints.size() > 1) {
-            GeoPoint startPoint = allGeoPoints.get(allGeoPoints.size() - 2);
-            GeoPoint endPoint = allGeoPoints.get(allGeoPoints.size() - 1);
-            Log.d("DEBUG", "Start: " + startPoint + ", End: " + endPoint);
-            //requestRoute(startPoint, endPoint);
-            // Közvetlenül hívd meg a requestRoute függvényt
-            try {
-                requestRoute(startPoint, endPoint);
-                Log.d("DEBUG", "requestRoute meghívva sikeresen.");
-            } catch (Exception e) {
-                Log.e("DEBUG", "Hiba a requestRoute meghívásakor: " + e.getMessage());
-            }
-            adjustMapViewToPoints(allGeoPoints);
         }
 
         markerMap.put(postcode, markers);
-        mapView.invalidate(); // Frissíti a térképet
+
+        if (!geoPoints.isEmpty()) {
+            GeoPoint endPoint = geoPoints.get(geoPoints.size() - 1);
+            try {
+                requestRoute(postcode, endPoint);
+            } catch (Exception e) {
+                Log.e("DEBUG", "Error requesting route: " + e.getMessage());
+            }
+        }
+
+        mapView.invalidate();
     }
 
-    private void requestRoute(GeoPoint startPoint, GeoPoint endPoint) {
+    private void requestRoute(String postcode, GeoPoint endPoint) {
         String url = "https://router.project-osrm.org/route/v1/driving/"
-                + startPoint.getLongitude() + "," + startPoint.getLatitude() + ";"
+                + fixedStartPoint.getLongitude() + "," + fixedStartPoint.getLatitude() + ";"
                 + endPoint.getLongitude() + "," + endPoint.getLatitude()
                 + "?overview=full&geometries=geojson";
 
         // Hívás a hálózati kéréshez
-        new RouteRequestTask().execute(url);
+        new RouteRequestTask(postcode).execute(url);
     }
 
-    private void adjustMapViewToPoints(List<GeoPoint> geoPoints) {
-        if (geoPoints == null || geoPoints.isEmpty()) {
-            return; // Ha nincsenek pontok, ne tegyünk semmit
+
+
+    private void drawRoute(String postcode, List<GeoPoint> routePoints) {
+        // Ha már létezik az útvonal az adott irányítószámhoz, először töröljük
+        if (routeMap.containsKey(postcode)) {
+            Polyline existingPolyline = routeMap.get(postcode);
+            mapView.getOverlays().remove(existingPolyline); // Töröljük a régi útvonalat
+            routeMap.remove(postcode); // Töröljük az irányítószámhoz tartozó régi bejegyzést is
         }
 
-        // Határozzuk meg a legnagyobb és legkisebb szélességeket és hosszúságokat
-        double minLat = Double.MAX_VALUE;
-        double maxLat = -Double.MAX_VALUE;
-        double minLon = Double.MAX_VALUE;
-        double maxLon = -Double.MAX_VALUE;
+        // Új útvonal létrehozása
+        Polyline polyline = new Polyline();
+        polyline.setPoints(routePoints);
+        polyline.setWidth(5.0f); // Vonal vastagságának beállítása
+        polyline.setColor(Color.BLUE); // Állítsd be a vonal színét
+        polyline.setVisible(true);
+        mapView.getOverlays().add(polyline); // Útvonal hozzáadása a térképhez
 
-        for (GeoPoint point : geoPoints) {
-            double lat = point.getLatitude();
-            double lon = point.getLongitude();
+        // Útvonal tárolása az irányítószámhoz
+        routeMap.put(postcode, polyline); // Frissítsük az útvonalat az újra
+        Log.d("DEBUG", "Új útvonal megrajzolva az irányítószámhoz: " + postcode);
+        mapView.invalidate(); // Frissítjük a térképet, hogy megjelenjen az új útvonal
+    }
 
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-            if (lon < minLon) minLon = lon;
-            if (lon > maxLon) maxLon = lon;
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
+        compassOverlay.enableCompass();
 
-        GeoPoint southwest = new GeoPoint(minLat, minLon);
-        GeoPoint northeast = new GeoPoint(maxLat, maxLon);
+    }
 
-        BoundingBox boundingBox = new BoundingBox(northeast.getLatitude(), northeast.getLongitude(),
-                southwest.getLatitude(), southwest.getLongitude());
-        double latMargin = (northeast.getLatitude() - southwest.getLatitude()) * 0.1;
-        double lonMargin = (northeast.getLongitude() - southwest.getLongitude()) * 0.1;
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mapView.onPause();
+        compassOverlay.disableCompass();
 
-        BoundingBox adjustedBoundingBox = new BoundingBox(
-                boundingBox.getLatNorth() + latMargin,
-                boundingBox.getLonEast() + lonMargin,
-                boundingBox.getLatSouth() - latMargin,
-                boundingBox.getLonWest() - lonMargin
-        );
+    }
 
-        // Állítsuk be a térkép nézetét
-        mapView.zoomToBoundingBox(adjustedBoundingBox, true);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mapView.setDestroyMode(true);
+
     }
 
 
     private class RouteRequestTask extends AsyncTask<String, Void, String> {
+        public String postcode;
+
+        public RouteRequestTask(String postcode) {
+            this.postcode = postcode; // Tárolja az irányítószámot a későbbi használatra
+        }
         @Override
         protected String doInBackground(String... urls) {
             try {
@@ -345,7 +376,7 @@ public class MainActivity extends AppCompatActivity {
                         routePoints.add(new GeoPoint(lat, lon));
                     }
 
-                    drawRoute(routePoints);
+                    drawRoute(postcode, routePoints);
                 } catch (JSONException e) {
                     e.printStackTrace();
                     Log.e("DEBUG", "JSON Parsing error: " + e.getMessage());
@@ -357,36 +388,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void drawRoute(List<GeoPoint> routePoints) {
-        Polyline polyline = new Polyline();
-        polyline.setPoints(routePoints);
-        polyline.setWidth(5.0f); // Vonal vastagságának beállítása
-        polyline.setColor(Color.BLUE); // Állítsd be a vonal színét
-        polyline.setVisible(true);
-        mapView.getOverlays().add(polyline);
-        mapView.invalidate();
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mapView.onResume();
-        compassOverlay.enableCompass();
 
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mapView.onPause();
-        compassOverlay.disableCompass();
-
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        mapView.setDestroyMode(true);
-
-    }
 }
+
+
